@@ -1,0 +1,113 @@
+<main class="container" *ngIf="!auth">
+  <h1>Team Task Manager</h1>
+  <p>{{ mode === 'signup' ? 'Create an account' : 'Login to continue' }}</p>
+  <form class="card" (ngSubmit)="submitAuth()">
+    <input *ngIf="mode === 'signup'" [(ngModel)]="form.name" name="name" placeholder="Name" required />
+    <select *ngIf="mode === 'signup'" [(ngModel)]="form.role" name="role">
+      <option value="member">member</option>
+      <option value="admin">admin</option>
+    </select>
+    <input [(ngModel)]="form.email" name="email" type="email" placeholder="Email" required />
+    <input [(ngModel)]="form.password" name="password" type="password" placeholder="Password" required />
+    <button type="submit">{{ mode === 'signup' ? 'Sign Up' : 'Login' }}</button>
+  </form>
+  <button class="link" (click)="mode = mode === 'signup' ? 'login' : 'signup'">
+    {{ mode === 'signup' ? 'Have an account? Login' : 'Need an account? Sign up' }}
+  </button>
+  <p class="error" *ngIf="error">{{ error }}</p>
+</main>
+
+<main class="container" *ngIf="auth">
+  <div class="header">
+    <h1>Team Task Manager</h1>
+    <div>
+      <span>{{ user?.name }} ({{ user?.role }})</span>
+      <button (click)="logout()">Logout</button>
+    </div>
+  </div>
+  <p class="error" *ngIf="error">{{ error }}</p>
+
+  <section class="grid">
+    <div class="card">
+      <h2>Dashboard</h2>
+      <p>Total: {{ dashboard?.counters?.total || 0 }}</p>
+      <p>To Do: {{ dashboard?.counters?.todo || 0 }}</p>
+      <p>In Progress: {{ dashboard?.counters?.inProgress || 0 }}</p>
+      <p>Done: {{ dashboard?.counters?.done || 0 }}</p>
+      <p>Overdue: {{ dashboard?.counters?.overdue || 0 }}</p>
+    </div>
+
+    <form class="card" *ngIf="user?.role === 'admin'" (ngSubmit)="createProject()">
+      <h2>Create Project</h2>
+      <input [(ngModel)]="projectForm.name" name="projectName" placeholder="Project name" required />
+      <textarea [(ngModel)]="projectForm.description" name="projectDescription" placeholder="Description"></textarea>
+      <button type="submit">Create</button>
+    </form>
+
+    <form class="card" *ngIf="user?.role === 'admin'" (ngSubmit)="addMemberToProject()">
+      <h2>Add member to project</h2>
+      <p class="hint">
+        Members only see projects they are added to. Enter the user’s account email (they must register first).
+      </p>
+      <select [(ngModel)]="memberForm.projectId" name="memberProjectId" required>
+        <option [ngValue]="''">Select project</option>
+        <option *ngFor="let p of projects" [ngValue]="p._id">{{ p.name }}</option>
+      </select>
+      <input [(ngModel)]="memberForm.email" name="memberEmail" type="email" placeholder="Member email" required />
+      <button type="submit">Add member</button>
+    </form>
+
+    <form class="card" (ngSubmit)="createTask()">
+      <h2>Create Task</h2>
+      <p class="hint" *ngIf="projects.length === 0 && user?.role === 'admin'">Create a project first, then pick it here.</p>
+      <p class="hint" *ngIf="projects.length === 0 && user?.role === 'member'">
+        You are not on any project yet. Ask an admin to add you to a team.
+      </p>
+      <input [(ngModel)]="taskForm.title" name="taskTitle" placeholder="Title" required />
+      <textarea [(ngModel)]="taskForm.description" name="taskDescription" placeholder="Description"></textarea>
+      <input [(ngModel)]="taskForm.dueDate" name="taskDueDate" type="date" required />
+      <select
+        [(ngModel)]="taskForm.projectId"
+        (ngModelChange)="taskForm.assignedTo = ''"
+        name="taskProjectId"
+        required
+      >
+        <option [ngValue]="''">Select project</option>
+        <option *ngFor="let p of projects" [ngValue]="p._id">{{ p.name }}</option>
+      </select>
+      <select [(ngModel)]="taskForm.assignedTo" name="taskAssignedTo" required>
+        <option [ngValue]="''">Assign to</option>
+        <option *ngFor="let m of assigneesForSelectedProject()" [ngValue]="m.id">{{ m.label }}</option>
+      </select>
+      <button type="submit">Create Task</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Projects</h2>
+    <p *ngIf="projects.length === 0">No projects yet.</p>
+    <article class="item" *ngFor="let project of projects">
+      <strong>{{ project.name }}</strong>
+      <p>{{ project.description }}</p>
+      <small>Members: {{ memberNames(project) }}</small>
+    </article>
+  </section>
+
+  <section class="card">
+    <h2>Tasks</h2>
+    <p *ngIf="tasks.length === 0">No tasks yet.</p>
+    <article class="item" *ngFor="let task of tasks">
+      <strong>{{ task.title }}</strong>
+      <p>{{ task.description }}</p>
+      <small>Project: {{ task.project.name }} | Assigned: {{ task.assignedTo.name }} | Due: {{ task.dueDate }}</small>
+      <div class="row">
+        <span>Status: {{ task.status }}</span>
+        <select [ngModel]="task.status" (ngModelChange)="updateStatus(task._id, $event)" name="status-{{task._id}}">
+          <option value="todo">todo</option>
+          <option value="in-progress">in-progress</option>
+          <option value="done">done</option>
+        </select>
+      </div>
+    </article>
+  </section>
+</main>
